@@ -1,0 +1,131 @@
+! Push-Nachricht über Pushbullet mit Bild senden
+string url = "https://api.pushbullet.com/api/pushes";
+string requestUrl = "https://api.pushbullet.com/v2/upload-request";
+string fileType;
+string fileUrl;
+string uploadUrl;
+
+string title = dom.GetObject("Push.Title").State().UriEncode();
+string message = dom.GetObject("Push.Message").State().UriEncode();
+string fileName= dom.GetObject("Push.FileName").State().UriEncode();
+string api = dom.GetObject("Pushbullet.API").State();
+
+string item;
+foreach(item, fileName.Split("."))
+{
+    if (item == "jpg")
+    {
+        fileType = "image/jpeg";
+    }
+}
+
+! Pushbullet-Upload Request
+dom.GetObject("CUxD.CUX2801001:1.CMD_SETS").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -u "#api#": -k -d file_name='"#fileName#"' -d file_type='"#fileType#"' "#requestUrl#"");
+dom.GetObject("CUxD.CUX2801001:1.CMD_QUERY_RET").State(1);
+
+string response = dom.GetObject("CUxD.CUX2801001:1.CMD_RETS").State();
+
+string acl;
+string awsAccessKeyId;
+string contentType;
+string dataKey;
+string policy;
+string signature;
+
+string outerKeyValuePair;
+foreach(outerKeyValuePair, response.Split("}"))
+{
+    ! Erster Character entfernen
+    outerKeyValuePair = outerKeyValuePair.Substr(1, outerKeyValuePair.Length() - 1);
+    !WriteLine(outerKeyValuePair);
+	
+	string outerKey = outerKeyValuePair.StrValueByIndex(":", 0).Replace("\"", "");
+	integer outerFirstDoublePointIndex = outerKeyValuePair.Find(":");
+	string outerValue = outerKeyValuePair.Substr(outerFirstDoublePointIndex + 1, outerKeyValuePair.Length() - outerFirstDoublePointIndex - 1).Replace("\"", "");
+	
+	! Erster Character entfernen
+    outerValue = outerValue.Substr(1, outerValue.Length() - 1);
+	
+	!WriteLine(outerKey);
+	!WriteLine(outerValue);
+	
+	if (outerKey == "data")
+	{
+		string dataKeyValuePair;
+		foreach(dataKeyValuePair, outerValue.Split(","))
+		{
+			!WriteLine(dataKeyValuePair);
+			string innerKey = dataKeyValuePair.StrValueByIndex(":", 0).Replace("\"", "");
+			integer dataFirstDoublePointIndex = dataKeyValuePair.Find(":");
+			string innerValue = dataKeyValuePair.Substr(dataFirstDoublePointIndex + 1, dataKeyValuePair.Length() - dataFirstDoublePointIndex - 1).Replace("\"", "");
+		
+			!WriteLine(innerKey);
+			!WriteLine(innerValue);
+			
+			if (innerKey == "acl")
+			{
+				acl = innerValue;
+			}
+			elseif (innerKey == "awsaccesskeyid")
+			{
+				awsAccessKeyId = innerValue;
+			}
+			elseif (innerKey == "content-type")
+			{
+				contentType = innerValue;
+			}
+			elseif (innerKey == "key")
+			{
+				dataKey = innerValue;
+			}
+			elseif (innerKey == "policy")
+			{
+				policy = innerValue;
+			}
+			elseif (innerKey == "signature")
+			{
+				signature = innerValue;
+			}
+		}
+	}
+	else
+	{
+		string keyValuePair;
+		foreach(keyValuePair, outerKeyValuePair.Split(","))
+		{
+			string key = keyValuePair.StrValueByIndex(":", 0).Replace("\"", "");
+			integer firstDoublePointIndex = keyValuePair.Find(":");
+			string value = keyValuePair.Substr(firstDoublePointIndex + 1, keyValuePair.Length() - firstDoublePointIndex - 1).Replace("\"", "");
+
+			if (key == "file_name")
+			{
+				fileName = value;
+			}
+			elseif (key == "file_type")
+			{
+				fileType = value;
+			}
+			elseif (key == "file_url")
+			{
+				fileUrl = value;
+			}
+			elseif (key == "upload_url")
+			{
+				uploadUrl = value;
+			}
+		}
+	}
+}
+
+! Bild auf Pushbullet Server hochladen
+dom.GetObject("CUxD.CUX2801001:1.CMD_SETS").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -i -X POST "#uploadUrl#" \ -F awsaccesskeyid="#awsAccessKeyId#" \ -F acl="#acl#" \ -F key="#dataKey#" \ -F signature="#signature#" \ -F policy="#policy#" \ -F content-type="#contentType#" -F file=@/tmp/"#fileName#"");
+dom.GetObject("CUxD.CUX2801001:1.CMD_QUERY_RET").State(1);
+
+response = dom.GetObject("CUxD.CUX2801001:1.CMD_RETS").State();
+
+! Pushbullet-Nachricht versenden
+dom.GetObject("CUxD.CUX2801001:1.CMD_EXEC").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -u "#api#": -k -d type=file -d body='"#message#"' -d file_name='"#fileName#"' -d file_type='"#fileType#"' -d file_url='"#fileUrl#"' "#url#"");
+
+! Systemvariablen zurücksetzen 
+dom.GetObject("Push.Title").State("");
+dom.GetObject("Push.Message").State("");

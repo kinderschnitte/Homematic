@@ -1,0 +1,168 @@
+! Script zur Übersetzung von Servicemeldungen
+! Globale Variable "Servicemessages.Tmp" muss ngelegt sein
+
+object o_service = dom.GetObject("Servicemessages.Tmp");
+string s_service_alt = o_service.Value();
+string s_service_neu = ";";
+
+string s_al_item; object o_al_item; boolean b_sent = false;
+string s_error_type; integer i_error_num; string s_error_message = "";
+object o_dp; object o_channel; string s_device;
+
+foreach (s_al_item, dom.GetObject(ID_SERVICES).EnumUsedIDs())
+{
+    o_al_item = dom.GetObject(s_al_item);
+
+    if (o_al_item.AlState() == asOncoming)
+    {
+        if (s_service_alt.Find(";" # s_al_item # ";") < 0)
+        {
+            if (!b_sent)
+            {
+                s_error_type = o_al_item.Name().StrValueByIndex (".", 1).StrValueByIndex ("-", 0);
+                i_error_num = o_al_item.Name().StrValueByIndex (".", 1).StrValueByIndex ("-", 1).ToInteger();
+                o_dp = dom.GetObject(o_al_item.AlTriggerDP());
+                o_channel = dom.GetObject (o_dp.Channel());
+                s_device = o_channel.Name().StrValueByIndex (":", 0);
+
+                if ((s_error_type == "ERROR_SABOTAGE") || ((s_error_type == "ERROR") && ((o_channel.HssType() == "MOTION_DETECTOR") || (o_channel.HssType() == "ROTARY_HANDLE_SENSOR") || (o_channel.HssType() == "SHUTTER_CONTACT"))))
+                {
+                    s_error_message = "Sabotage erkannt";
+                }
+
+                if (s_error_type == "STATE")
+                {
+                    if (o_channel.HssType() == "WATERDETECTIONSENSOR")
+                    {
+                        s_error_message = ".:Feuchtigkeit erkannt:Nässe erkannt".StrValueByIndex (":", i_error_num);
+                    }
+
+                    if (o_channel.HssType() == "SMOKE_DETECTOR_TEAM")
+                    {
+                        s_error_message = "Alarm ausgelöst;";
+                    }
+
+                    if (o_channel.HssType() == "SENSOR_FOR_CARBON_DIOXIDE")
+                    {
+                        s_error_message = ".:CO2-Belastung erhöht:CO2-Belastung stark erhöht".StrValueByIndex (":", i_error_num);
+                    }
+                }
+
+                if (s_error_type == "ERROR")
+                {
+                    if (o_channel.HssType() == "CLIMATECONTROL_VENT_DRIVE")
+                    {
+                        s_error_message = ".:Ventil blockiert:Ventil falsch montiert:Stellbereich zu klein:Batterie leer, Störposition angefahren".StrValueByIndex (":", i_error_num);
+                    }
+
+                    if ((o_channel.HssType() == "DIMMER") || (o_channel.HssType() == "VIRTUAL_DIMMER"))
+                    {
+                        s_error_message = "Lastfehler";
+                    }
+
+                    if (o_channel.HssType() == "WINMATIC")
+                    {
+                        s_error_message = ".:Fehler Drehgriff:Fehler Kippantrieb".StrValueByIndex (":", i_error_num);
+                    }
+
+                    if (o_channel.HssType() == "KEYMATIC")
+                    {
+                        s_error_message = ".:Fehler einkuppeln:Abbruch Motorlauf".StrValueByIndex (":", i_error_num);
+                    }
+                }
+
+                if (s_error_type == "ERROR_OVERHEAT")
+                {
+                    s_error_message = "Überhitzung";
+                }
+
+                if (s_error_type == "ERROR_OVERLOAD")
+                {
+                    s_error_message = "Überlast";
+                }
+
+                if (s_error_type == "ERROR_REDUCED")
+                {
+                    s_error_message = "Last zu gering";
+                }
+
+                if (s_error_type == "ERROR_POWER")
+                {
+                    s_error_message = "Stromversorgung ausgefallen";
+                }
+
+                if (s_error_type == "ERROR_BATTERY")
+                {
+                    s_error_message = "Batterie defekt";
+                }
+
+                if (s_error_type == "U_SOURCE_FAIL")
+                {
+                    s_error_message = "Netzteil ausgefallen";
+                }
+
+                if (s_error_type == "USBH_POWERFAIL")
+                {
+                    s_error_message = "USB-Host deaktiviert";
+                }
+
+                if (s_error_type == "FAULT_REPORTING")
+                {
+                    s_error_message = ".:Ventil blockiert:Ventil falsch montiert:Stellbereich zu klein:Kommunikationsfehler:.:Batteriestand niedrig:Batterie leer, Störposition angefahren".StrValueByIndex (":", i_error_num);
+                }
+
+                if (s_error_type == "LOWBAT")
+                {
+                    s_error_message = "Batteriestand niedrig";
+                }
+
+                if (s_error_type == "DEVICE_IN_BOOTLOADER")
+                {
+                    s_error_message = "Gerät startet neu";
+                }
+
+                if (s_error_type == "UPDATE_PENDING")
+                {
+                    s_error_message = "Update verfügbar";
+                }
+
+                if (s_error_type == "CONFIG_PENDING")
+                {
+                    s_error_message = "Konfigurationsdaten stehen zur Übertragung an";
+                }
+
+                if (s_error_type == "STICKY_UNREACH")
+                {
+                    s_error_message = "Kommunikation war gestört";
+                }
+
+                if (s_error_type == "UNREACH")
+                {
+                    s_error_message = "Kommunikation ist zur Zeit gestört";
+                }
+
+                if (s_error_message != "")
+                {
+                    ! Nachricht setzen
+                    dom.GetObject ("Push.Message").State (s_device # ": " # s_error_message);
+                    dom.GetObject ("Push.Title").State ("Servicemeldung");
+
+                    ! Nachricht per Push versenden
+                    dom.GetObject ("Push Telegram").ProgramExecute();
+                }
+
+                b_sent = true;
+                s_service_neu = s_service_neu # s_al_item # ";";
+            }
+        }
+        else
+        {
+            s_service_neu = s_service_neu # s_al_item # ";";
+        }
+    }
+}
+
+if (s_service_neu != s_service_alt)
+{
+    o_service.State(s_service_neu);
+}

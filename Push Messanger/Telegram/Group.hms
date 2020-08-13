@@ -1,0 +1,15 @@
+! Push-Nachricht über Telegram an Gruppe senden
+string title = dom.GetObject("Push.Title").State();
+string message = dom.GetObject("Push.Message").State();
+string botApi = dom.GetObject("Telegram.BotApi").State();
+string groupId = dom.GetObject("Telegram.GroupId").State();
+
+string text = "*" + title + "*\n" + message;
+text = text.Replace(".", "\.").Replace("!", "\!").ToUTF8();
+
+! Telegram-Nachricht versenden
+dom.GetObject("CUxD.CUX2801001:1.CMD_EXEC").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -s -k https://api.telegram.org/bot"#botApi#"/sendMessage -F text='"#text#"' -F chat_id="#groupId#" -F parse_mode='MarkdownV2'");
+
+! Systemvariablen zurücksetzen 
+dom.GetObject("Push.Title").State("");
+dom.GetObject("Push.Message").State("");

@@ -1,0 +1,19 @@
+! Push-Nachricht über Pushover in eine Gruppe senden
+string url = "https://api.pushover.net/1/messages.json";
+string title = dom.GetObject("Push.Title").State().ToUTF8();
+string message = dom.GetObject("Push.Message").State().ToUTF8();
+string prio = dom.GetObject("Pushover.Prio").State().ToString().StrValueByIndex(".", 0);
+string groupToken = dom.GetObject("Pushover.GroupToken").State();
+string appToken = dom.GetObject("Pushover.AppToken").State();
+string notifyTone = dom.GetObject("Pushover.NotifyTone").State();
+string timestamp = system.Date("%F %X").ToTime().ToInteger();
+string expire= dom.GetObject("Pushover.Expire").State().ToString().StrValueByIndex(".", 0);
+string retry= dom.GetObject("Pushover.Retry").State().ToString().StrValueByIndex(".", 0);
+
+! Pushover-Nachricht versenden
+dom.GetObject("CUxD.CUX2801001:1.CMD_EXEC").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -s -k -d token="#appToken#" -d user="#groupToken#" -d title='"#title#"' -d priority="#prio#" -d sound='"#notifyTone#"' -d message='"#message#"' -d html=1 -d timestamp="#timestamp#" -d retry="#retry#" -d expire="#expire#" "#url#"");
+
+! Systemvariablen zurücksetzen 
+dom.GetObject("Push.Title").State("");
+dom.GetObject("Push.Message").State("");
+dom.GetObject("Pushover.Prio").State(0);

@@ -1,0 +1,13 @@
+! Push-Nachricht über Pushbullet senden
+string url = "https://api.pushbullet.com/api/pushes";
+
+string title = dom.GetObject("Push.Title").State().UriEncode();
+string message = dom.GetObject("Push.Message").State().UriEncode();
+string api = dom.GetObject("Pushbullet.API").State();
+
+! Pushbullet-Nachricht versenden
+dom.GetObject("CUxD.CUX2801001:1.CMD_EXEC").State("LD_LIBRARY_PATH=/usr/local/addons/cuxd /usr/local/addons/cuxd/curl -u "#api#": -k -d type=note -d title='"#title#"' -d body='"#message#"' "#url#"");
+
+! Systemvariablen zurücksetzen 
+dom.GetObject("Push.Title").State("");
+dom.GetObject("Push.Message").State("");
